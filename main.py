@@ -20,6 +20,9 @@ from map import *
 
 #from pyimagesearch.centroidtracker import *
 
+from djitellopy import Tello
+tello = Tello()
+
 shm = shared_memory.SharedMemory(create=True, size=6520800, name='psm_c013ddb5')
 shm_image = np.ndarray((Yresolution, Xresolution, 3), dtype=np.uint8, buffer=shm.buf)
 logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s', )
@@ -105,7 +108,6 @@ def YOLO():
             pass
     # cap = cv2.VideoCapture(0)
     # USE if  webcam
-
     cap = cv2.VideoCapture(0)  # set web cam properties width and height, working for USB for webcam
     cap.set(3, Xresolution)
     cap.set(4, Yresolution)
@@ -120,13 +122,18 @@ def YOLO():
     print(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.set(3, Xresolution)
     cap.set(4, Yresolution)
+
+    # use if tello
+    tello.connect()
+    tello.streamon()
+    frame_from_tello = tello.get_frame_read()
+
     """
     #for recording of video
     out = cv2.VideoWriter(
         "output.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10.0,
         (darknet.network_width(netMain), darknet.network_height(netMain)))
     """
-
 
     # Create an image we reuse for each detect
     darknet_image = darknet.make_image(darknet.network_width(netMain),
@@ -136,8 +143,9 @@ def YOLO():
     print("Starting the ID, distance,YOLOm loop...")
     while True:
         prev_time = time.time()
-        ret, frame_read = cap.read()
-        frame_rgb = cv2.cvtColor(frame_read, cv2.COLOR_BGR2RGB)
+        ret, img_frame_from_webcam = cap.read()
+        img_frame_from_tello = frame_from_tello.frame
+        frame_rgb = cv2.cvtColor(img_frame_from_tello, cv2.COLOR_BGR2RGB)
         frame_rgb = rotate_by_angel_and_delay(frame_rgb,0,delay_off_whole_program)  # use for changing direction of video and speed of video
         frame_resized = cv2.resize(frame_rgb,
                                    (darknet.network_width(netMain),
@@ -155,21 +163,17 @@ def YOLO():
         dist_id_detections=update_resutls_for_distance(id_detections)
         draw_distance_next_to_bb_box(image,dist_id_detections)
         draw_id(image,dist_id_detections,)
-        #navigate(dist_id_detections)
-
         manager_detections.append(dist_id_detections)
-
         shm_image[:] = image[:]  # copy image to shared memory as array because we would like to share with other proces
         end_time = time.time()
         show_fps(start_time, end_time, image)
         start_time = time.time()
         cv2.imshow('Yolo_out', image)
-        #print(image.shape)
         k = cv2.waitKey(1)
-        if k == 0xFF & ord("q"):
+        if k == 0xFF & ord("p"):
             break
     cap.release()
-    out.release()
+    #out.release()
     shm.close()
     shm.unlink()
 
@@ -372,6 +376,7 @@ def second_visualization(Xresolution, Yresolution):
     number_of_deleted_objects = 0
 
     start_time = time.time()  # for FPS counting
+    tello.takeoff()
     while True:
         frame = shm_image
         # get data from shared memory
@@ -423,11 +428,32 @@ def second_visualization(Xresolution, Yresolution):
             cv2.imshow('second_visualization', frame)
         except Exception as e:
            pass
-
-
         k = cv2.waitKey(1)
         if k == 0xFF & ord("q"):
             break
+
+        key = cv2.waitKey(1) & 0xff
+        if key == 27:  # ESC
+            break
+        elif key == ord('w'):
+            tello.move_forward(30)
+        elif key == ord('s'):
+            tello.move_back(30)
+        elif key == ord('a'):
+            tello.move_left(30)
+        elif key == ord('d'):
+            tello.move_right(30)
+        elif key == ord('e'):
+            tello.rotate_clockwise(30)
+        elif key == ord('q'):
+            tello.rotate_counter_clockwise(30)
+        elif key == ord('r'):
+            tello.move_up(30)
+        elif key == ord('f'):
+            tello.move_down(30)
+        elif key == ord('l'):
+            tello.land()
+
 
 def count_visible_objekt(object_to_count, objekty):
     count_of_objects = 0

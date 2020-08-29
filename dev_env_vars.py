@@ -4,8 +4,12 @@
 #Xresolution = 640  #used for setting input camera resolution
 #Yresolution = 480   #used for setting input camera resolution
 
-Xresolution = 1280  #used for setting input camera resolution
+#Xresolution = 1280  #used for setting input camera resolution
+#Yresolution = 720   #used for setting input camera resolution
+
+Xresolution = 960  #used for setting input camera resolution
 Yresolution = 720   #used for setting input camera resolution
+
 
 #Xresolution = 1920  #used for setting input camera resolution
 #Yresolution = 1080  #used for setting input camera resolution
